@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NDVI — Ижевск</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: #0f1710;
+      color: #d4e8c2;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: #0f1710;
+      border-bottom: 1px solid #2a3d1e;
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    .header-left h1 {
+      font-size: 15px;
+      font-weight: normal;
+      letter-spacing: 0.08em;
+      color: #c8dca8;
+    }
+
+    .header-left p {
+      font-size: 11px;
+      color: #6a8a52;
+      margin-top: 2px;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.04em;
+    }
+
+    .header-right {
+      font-size: 11px;
+      color: #6a8a52;
+      font-family: 'Courier New', monospace;
+    }
+
+    #map {
+      flex: 1;
+      z-index: 1;
+    }
+
+    /* Legend */
+    .legend {
+      position: absolute;
+      bottom: 28px;
+      left: 16px;
+      z-index: 1000;
+      background: rgba(15, 23, 16, 0.92);
+      border: 1px solid #2a3d1e;
+      border-radius: 4px;
+      padding: 12px 14px;
+      min-width: 160px;
+    }
+
+    .legend-title {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: #6a8a52;
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .legend-bar {
+      height: 8px;
+      width: 130px;
+      border-radius: 2px;
+      background: linear-gradient(to right, #d4b483, #8ab554, #2d6e1e, #0d3b0a);
+      margin-bottom: 4px;
+    }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #6a8a52;
+      font-family: 'Courier New', monospace;
+      width: 130px;
+    }
+
+    .legend-stats {
+      margin-top: 10px;
+      border-top: 1px solid #2a3d1e;
+      padding-top: 8px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      font-family: 'Courier New', monospace;
+      margin-bottom: 3px;
+    }
+
+    .stat-label { color: #6a8a52; }
+    .stat-value { color: #c8dca8; }
+
+    /* Info panel */
+    .info-panel {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 1000;
+      background: rgba(15, 23, 16, 0.92);
+      border: 1px solid #2a3d1e;
+      border-radius: 4px;
+      padding: 14px 16px;
+      width: 200px;
+      display: none;
+    }
+
+    .info-panel.visible { display: block; }
+
+    .info-panel-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: #6a8a52;
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .info-value {
+      font-size: 28px;
+      font-family: 'Courier New', monospace;
+      color: #c8dca8;
+      margin-bottom: 4px;
+      line-height: 1;
+    }
+
+    .info-bar-wrap {
+      margin: 10px 0 6px;
+      height: 4px;
+      background: #2a3d1e;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .info-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: #8ab554;
+      transition: width 0.3s ease;
+    }
+
+    .info-class {
+      font-size: 11px;
+      color: #6a8a52;
+      font-family: 'Courier New', monospace;
+    }
+
+    .hint {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 1000;
+      font-size: 11px;
+      color: #4a6a38;
+      font-family: 'Courier New', monospace;
+      background: rgba(15, 23, 16, 0.85);
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid #2a3d1e;
+    }
+
+    /* Leaflet overrides */
+    .leaflet-container { background: #1a2b1a; }
+    .leaflet-control-attribution { display: none; }
+    .leaflet-control-zoom a {
+      background: #0f1710 !important;
+      color: #6a8a52 !important;
+      border-color: #2a3d1e !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background: #1a2b1a !important;
+      color: #c8dca8 !important;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>NDVI · Ижевск</h1>
+    <p>Средний индекс растительности · сетка 500 м</p>
+  </div>
+  <div class="header-right" id="cellCount">— ячеек</div>
+</header>
+
+<div id="map"></div>
+
+<div class="legend">
+  <div class="legend-title">NDVI</div>
+  <div class="legend-bar"></div>
+  <div class="legend-labels">
+    <span id="leg-min">−0.3</span>
+    <span id="leg-max">0.9</span>
+  </div>
+  <div class="legend-stats">
+    <div class="stat-row">
+      <span class="stat-label">среднее</span>
+      <span class="stat-value" id="stat-mean">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">мин</span>
+      <span class="stat-value" id="stat-min">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">макс</span>
+      <span class="stat-value" id="stat-max">—</span>
+    </div>
+  </div>
+</div>
+
+<div class="hint" id="hint">Нажмите на ячейку</div>
+
+<div class="info-panel" id="infoPanel">
+  <div class="info-panel-label">NDVI · ячейка</div>
+  <div class="info-value" id="infoValue">—</div>
+  <div class="info-bar-wrap">
+    <div class="info-bar-fill" id="infoBar" style="width: 0%"></div>
+  </div>
+  <div class="info-class" id="infoClass">—</div>
+</div>
+
+<script>
+  // ─── CONFIG ───────────────────────────────────────────────
+  // Поменяй имя поля если оно называется иначе (например "ndvi_mean")
+  const FIELD = '_mean';
+
+  // Цветовая шкала NDVI: от сухого/городского к густой растительности
+  const COLORS = [
+    { v: -0.3, hex: '#d4b483' },  // голая почва / городские крыши
+    { v:  0.1, hex: '#b8c87a' },  // редкая растительность
+    { v:  0.3, hex: '#8ab554' },  // умеренная зелень
+    { v:  0.5, hex: '#4d8c2a' },  // плотная растительность
+    { v:  0.9, hex: '#0d3b0a' },  // густой лес
+  ];
+
+  function ndviColor(v) {
+    if (v === null || v === undefined || isNaN(v)) return '#333';
+    for (let i = 1; i < COLORS.length; i++) {
+      if (v <= COLORS[i].v) {
+        const t = (v - COLORS[i-1].v) / (COLORS[i].v - COLORS[i-1].v);
+        return lerpColor(COLORS[i-1].hex, COLORS[i].hex, t);
+      }
+    }
+    return COLORS[COLORS.length - 1].hex;
+  }
+
+  function lerpColor(a, b, t) {
+    const ah = parseInt(a.slice(1), 16);
+    const bh = parseInt(b.slice(1), 16);
+    const ar = ah >> 16, ag = (ah >> 8) & 0xff, ab = ah & 0xff;
+    const br = bh >> 16, bg = (bh >> 8) & 0xff, bb = bh & 0xff;
+    const rr = Math.round(ar + (br - ar) * t);
+    const rg = Math.round(ag + (bg - ag) * t);
+    const rb = Math.round(ab + (bb - ab) * t);
+    return '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb).toString(16).slice(1);
+  }
+
+  function ndviClass(v) {
+    if (v < 0)   return 'вода / искусственные поверхности';
+    if (v < 0.1) return 'голая почва, городская застройка';
+    if (v < 0.2) return 'редкая растительность';
+    if (v < 0.4) return 'умеренная растительность';
+    if (v < 0.6) return 'плотная растительность';
+    return 'густой лес';
+  }
+
+  // ─── MAP INIT ─────────────────────────────────────────────
+  const map = L.map('map', {
+    center: [56.85, 53.2],
+    zoom: 12,
+    zoomControl: true,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+  }).addTo(map);
+
+  // ─── LOAD GEOJSON ─────────────────────────────────────────
+  let geojsonLayer = null;
+  let selectedLayer = null;
+  let globalMin = Infinity, globalMax = -Infinity, globalSum = 0, globalCount = 0;
+
+  fetch('data/ndvi_demo.geojson')
+    .then(r => {
+      if (!r.ok) throw new Error('Файл не найден: data/ndvi_demo.geojson');
+      return r.json();
+    })
+    .then(data => {
+      // Считаем статистику
+      data.features.forEach(f => {
+        const v = f.properties[FIELD];
+        if (v !== null && v !== undefined && !isNaN(v)) {
+          if (v < globalMin) globalMin = v;
+          if (v > globalMax) globalMax = v;
+          globalSum += v;
+          globalCount++;
+        }
+      });
+
+      const globalMean = globalSum / globalCount;
+
+      // Обновляем легенду
+      document.getElementById('leg-min').textContent = globalMin.toFixed(2);
+      document.getElementById('leg-max').textContent = globalMax.toFixed(2);
+      document.getElementById('stat-mean').textContent = globalMean.toFixed(2);
+      document.getElementById('stat-min').textContent = globalMin.toFixed(2);
+      document.getElementById('stat-max').textContent = globalMax.toFixed(2);
+      document.getElementById('cellCount').textContent = globalCount + ' ячеек';
+
+      // Рисуем слой
+      geojsonLayer = L.geoJSON(data, {
+        style: feature => {
+          const v = feature.properties[FIELD];
+          return {
+            fillColor: ndviColor(v),
+            fillOpacity: 0.75,
+            color: '#0f1710',
+            weight: 0.5,
+            opacity: 0.6,
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          layer.on('click', () => selectCell(feature, layer));
+          layer.on('mouseover', () => {
+            if (layer !== selectedLayer) {
+              layer.setStyle({ weight: 1.5, color: '#c8dca8', opacity: 1 });
+            }
+          });
+          layer.on('mouseout', () => {
+            if (layer !== selectedLayer) {
+              layer.setStyle({ weight: 0.5, color: '#0f1710', opacity: 0.6 });
+            }
+          });
+        }
+      }).addTo(map);
+
+      map.fitBounds(geojsonLayer.getBounds(), { padding: [20, 20] });
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById('hint').textContent = '⚠ ' + err.message;
+    });
+
+  // ─── CELL SELECTION ───────────────────────────────────────
+  function selectCell(feature, layer) {
+    // Сброс предыдущего
+    if (selectedLayer) {
+      selectedLayer.setStyle({ weight: 0.5, color: '#0f1710', opacity: 0.6 });
+    }
+
+    selectedLayer = layer;
+    layer.setStyle({ weight: 2, color: '#ffffff', opacity: 1 });
+
+    const v = feature.properties[FIELD];
+    const range = globalMax - globalMin;
+    const pct = range > 0 ? Math.round(((v - globalMin) / range) * 100) : 50;
+
+    document.getElementById('hint').style.display = 'none';
+    const panel = document.getElementById('infoPanel');
+    panel.classList.add('visible');
+
+    document.getElementById('infoValue').textContent = v !== null ? v.toFixed(3) : '—';
+    document.getElementById('infoBar').style.width = pct + '%';
+    document.getElementById('infoBar').style.background = ndviColor(v);
+    document.getElementById('infoClass').textContent = ndviClass(v);
+  }
+
+  map.on('click', e => {
+    if (!e.originalEvent._fromFeature) {
+      if (selectedLayer) {
+        selectedLayer.setStyle({ weight: 0.5, color: '#0f1710', opacity: 0.6 });
+        selectedLayer = null;
+      }
+      document.getElementById('infoPanel').classList.remove('visible');
+      document.getElementById('hint').style.display = '';
+    }
+  });
+</script>
+
+</body>
+</html>
