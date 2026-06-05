@@ -12,7 +12,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Arial', serif;
+      font-family: 'Georgia', serif;
       background: #0f1710;
       color: #d4e8c2;
       height: 100vh;
@@ -42,14 +42,14 @@
       font-size: 11px;
       color: #6a8a52;
       margin-top: 2px;
-      font-family: 'Arial', monospace;
+      font-family: 'Courier New', monospace;
       letter-spacing: 0.04em;
     }
 
     .header-right {
       font-size: 11px;
       color: #6a8a52;
-      font-family: 'Arial', monospace;
+      font-family: 'Courier New', monospace;
     }
 
     #map {
@@ -133,7 +133,7 @@
       font-size: 10px;
       letter-spacing: 0.12em;
       color: #6a8a52;
-      font-family: 'Arial', monospace;
+      font-family: 'Courier New', monospace;
       text-transform: uppercase;
       margin-bottom: 10px;
     }
@@ -342,7 +342,10 @@
           };
         },
         onEachFeature: (feature, layer) => {
-          layer.on('click', () => selectCell(feature, layer));
+          layer.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            selectCell(feature, layer);
+          });
           layer.on('mouseover', () => {
             if (layer !== selectedLayer) {
               layer.setStyle({ weight: 1.5, color: '#c8dca8', opacity: 1 });
@@ -387,15 +390,13 @@
     document.getElementById('infoClass').textContent = ndviClass(v);
   }
 
-  map.on('click', e => {
-    if (!e.originalEvent._fromFeature) {
-      if (selectedLayer) {
-        selectedLayer.setStyle({ weight: 0.5, color: '#0f1710', opacity: 0.6 });
-        selectedLayer = null;
-      }
-      document.getElementById('infoPanel').classList.remove('visible');
-      document.getElementById('hint').style.display = '';
+  map.on('click', () => {
+    if (selectedLayer) {
+      selectedLayer.setStyle({ weight: 0.5, color: '#0f1710', opacity: 0.6 });
+      selectedLayer = null;
     }
+    document.getElementById('infoPanel').classList.remove('visible');
+    document.getElementById('hint').style.display = '';
   });
 </script>
 
